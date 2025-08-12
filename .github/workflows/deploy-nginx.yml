@@ -1,0 +1,36 @@
+name: Deploy Nginx on Ubuntu EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Deploy to EC2
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        source: "html/*"
+        target: "/home/ubuntu/html"
+
+    - name: Run Nginx in Docker
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          docker stop my-nginx || true
+          docker rm my-nginx || true
+          docker run -d --name my-nginx -p 80:80 \
+            -v /home/ubuntu/html:/usr/share/nginx/html \
+            nginx:latest
